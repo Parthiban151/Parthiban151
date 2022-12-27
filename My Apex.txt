@@ -1,0 +1,48 @@
+public class FlexLicensingAccount {
+    
+    public static void getFlexLicensing(List<Opportunity> newOpp){
+        set<Id> accid = new set<Id>();
+        set<Id> quoteId = new set<Id>();
+        for(Opportunity opp: newOpp){
+            if(opp.AccountId != null){
+                accid.add(opp.AccountId);
+                quoteId.add(opp.SBQQ__PrimaryQuote__c);
+            }
+        }
+        List<SBQQ__Quote__c> fetchQuote = [SELECT Id, Flex_Licensing__c FROM SBQQ__Quote__c WHERE Id IN: quoteId];
+        Map<Id, SBQQ__Quote__c> quoteMap = new Map<Id,SBQQ__Quote__c>();
+        for(SBQQ__Quote__c quote: fetchQuote) {
+            quoteMap.put(quote.Id, quote);
+        }
+        
+        if(!accid.isEmpty()) {
+            List<Account> acc = [SELECT Id, Flex_Licensing__c FROM Account WHERE Id IN: accid];
+            Map<Id, Account> accountMap = new Map<Id, Account>();
+            for(Account a : acc) {
+                accountMap.put(a.Id, a);
+            }
+            
+            
+            List<Account> updateAccount = new List<Account>();
+            for(Opportunity opp: newOpp){ 
+                if(accountMap.containsKey(opp.AccountId)){  
+                    Account accObject = new Account();
+                    accObject.Id =opp.AccountId;
+                    
+                    if(opp.StageName =='S5: Closed won' && quoteMap.containsKey(opp.SBQQ__PrimaryQuote__c)){
+                        accObject.Flex_Licensing__c = quoteMap.values().Flex_Licensing__c;
+                        
+                    }else{
+                        accObject.Flex_Licensing__c = False;
+                    }
+                    updateAccount.add(accObject);
+                }
+                
+                
+            } 
+            if(!updateAccount.isEmpty()) {
+                update updateAccount;
+            }
+        }
+    }
+}
